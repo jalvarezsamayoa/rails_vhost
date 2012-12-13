@@ -1,0 +1,10 @@
+# bluekite_api.conf
+<VirtualHost *:80>
+  ServerName $fqdn
+  DocumentRoot /var/www/$app_name/current/public
+  RailsEnv sandbox_offline
+  <Directory /var/www/$app_name/current/public>
+     AllowOverride all
+     Options -MultiViews
+  </Directory>
+</VirtualHost>

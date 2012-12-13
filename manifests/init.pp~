@@ -1,0 +1,93 @@
+class rails_vhost($app_name='gateway_mapper', $rails_env='production', $server_name=$fqdn) { 
+
+  Exec {
+    path => "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  }
+    
+group { 'www-data':
+    ensure => present,
+}
+
+group { "rvm":
+  ensure => present,
+}
+
+user { "ubuntu":
+  ensure => present,
+  groups => ['www-data', 'rvm'];
+}
+
+
+package { "apache2":
+  ensure => present,
+  before => File["/etc/apache2/sites-available/$app_name"];
+}
+
+service { "apache2":
+  enable => true,
+  ensure => running,
+}
+
+
+file {
+  ["/var/www/$app_name",
+  "/var/www/$app_name/shared",
+  "/var/www/$app_name/releases"]:
+    ensure => directory,
+    owner => ubuntu,
+    group => www-data,
+    mode => 755;
+  "/etc/apache2/sites-available/$app_name":
+    ensure => 'present',
+    content => template("rails_vhost/vhost.erb"),
+    owner => root,
+    group => root,
+    mode => 644,
+    notify => Service["apache2"],
+    require => Package["apache2"];
+}
+
+exec {
+  "a2ensite $app_name":
+     notify => Service["apache2"],
+     require => File["/etc/apache2/sites-available/$app_name"];
+}
+
+file {
+   "/etc/apache2/sites-enabled/default":
+     ensure => link,
+     target => "/etc/apache2/sites-available/$app_name",
+     notify => Service["apache2"],
+     require => File["/etc/apache2/sites-available/$app_name"];
+}
+
+
+file {"/home/ubuntu/.ssh":
+  ensure => directory,
+  owner => ubuntu,
+  group => ubuntu
+}
+
+
+file {
+  "/home/ubuntu/.ssh/id_rsa":
+    ensure => file,
+    source => "puppet:///rails_vhost/id_rsa",
+    owner => ubuntu,
+    group => ubuntu,
+    mode => 600;
+  "/home/ubuntu/.ssh/id_rsa.pub":
+    ensure => file,
+    source => "puppet:///rails_vhost/id_rsa.pub",
+    owner => ubuntu,
+    group => ubuntu,
+    mode => 600;
+  "/home/ubuntu/.ssh/known_hosts":
+    ensure => file,
+    source => "puppet:///rails_vhost/known_hosts",
+    owner => ubuntu,
+    group => ubuntu;
+}
+
+
+}
